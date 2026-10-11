@@ -153,6 +153,41 @@ export function currentBookId() {
   return m ? m[1] : null;
 }
 
+// 按需生成：确保某本书至少有 minCount 道题，逐块生成直到够数或无块可生
+// 返回 { ok, reason? }；reason: 'busy' | 'nokey' | 'error'
+export async function ensureChunkQuestions(bookId, minCount, onProgress) {
+  if (running) return { ok: false, reason: 'busy' };
+  const settings = getSettings();
+  const configured = settings.provider === 'gemini' ? settings.geminiKey : settings.apiKey;
+  if (!configured) return { ok: false, reason: 'nokey' };
+
+  const level = document.getElementById('gen-level')?.value || 'CET-4';
+  const count = Number(document.getElementById('gen-batch')?.value) || 8;
+
+  while (true) {
+    if (storeGet(`book:${bookId}:exercises`, []).length >= minCount) return { ok: true };
+    const cs = storeGet(`book:${bookId}:chunks`, []);
+    const chunk = cs.find(c => c.status !== 'done');
+    if (!chunk) return { ok: true }; // 所有块都已生成，用现有题目
+    onProgress?.(chunk.index + 1, cs.length);
+    try {
+      const text = storeGet(`book:${bookId}:text`, '');
+      const words = await generateWords(text.slice(chunk.start, chunk.end), {
+        level, count, customPrompt: settings.customPrompt,
+      });
+      appendExercises(bookId, chunk.index, words);
+      chunk.status = 'done';
+    } catch (e) {
+      console.error(e);
+      chunk.status = 'failed';
+      chunk.failedMsg = String(e.message || e);
+      storeSet(`book:${bookId}:chunks`, cs);
+      return { ok: false, reason: 'error', error: String(e.message || e) };
+    }
+    storeSet(`book:${bookId}:chunks`, cs);
+  }
+}
+
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {

@@ -1,7 +1,7 @@
 // practice.js — 练习流程控制、判分、进度记录
 import { get as storeGet, getBooks, addProgress, getStats, saveStats, addWord } from './store.js';
 import { aiGrade } from './ai.js';
-import { currentBookId } from './generate.js';
+import { currentBookId, ensureChunkQuestions } from './generate.js';
 
 let session = null; // { mode, items, idx, results[] }
 
@@ -65,9 +65,39 @@ export async function gradeCloze(input, ex) {
 
 // ---------- 会话 ----------
 
-export function startPractice(sourceId, mode, count) {
+export async function startPractice(sourceId, mode, count) {
   let pool = getExercises(sourceId);
-  if (!pool.length) { alert('该书还没有练习，请先到书详情页生成'); return; }
+  // 做一块生一块：题不够时自动逐块生成（仅单本书来源；'all' 只用已生成的）
+  if (pool.length < count && sourceId !== 'all') {
+    const book = getBooks().find(b => b.id === sourceId);
+    const loading = el('practice-loading');
+    loading.classList.remove('hidden');
+    el('practice-home').classList.add('hidden');
+    el('practice-result').classList.add('hidden');
+    try {
+      const r = await ensureChunkQuestions(sourceId, count, (done, total) => {
+        el('load-text').textContent = `《${book ? book.name : ''}》第 ${done}/${total} 块生成中…`;
+        el('load-bar').style.width = (done / total * 100) + '%';
+      });
+      if (!r.ok && r.reason === 'nokey') {
+        alert('请先到「设置」配置 AI 服务商和 API Key');
+        location.hash = '#/settings';
+        return;
+      }
+      if (!r.ok && r.reason === 'error') {
+        alert('生成失败：' + r.error + '\n可稍后重试，已生成的题目仍然可用');
+      }
+    } finally {
+      loading.classList.add('hidden');
+    }
+    pool = getExercises(sourceId);
+  }
+  if (!pool.length) {
+    alert(sourceId === 'all'
+      ? '还没有任何练习。请到书架选一本书进入详情页生成，或直接从单本书开始练习。'
+      : '这本书还没有可用的练习，生成失败或内容为空。');
+    return;
+  }
   pool = shuffle(pool).slice(0, count);
   session = { mode, items: pool, idx: 0, results: [] };
   showQuiz();
