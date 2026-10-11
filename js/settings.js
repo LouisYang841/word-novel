@@ -23,6 +23,7 @@ export function initSettings() {
 
   el('fetch-models-openai').addEventListener('click', () => loadModels('openai'));
   el('fetch-models-gemini').addEventListener('click', () => loadModels('gemini'));
+  initModelModal();
 
   el('set-test').addEventListener('click', async () => {
     saveForm(); // 先保存再测
@@ -91,39 +92,72 @@ function toggleProviderFields() {
   el('set-gemini-fields').classList.toggle('hidden', !isGemini);
 }
 
-// 拉取模型列表并渲染成点选芯片，点选后填入模型名输入框
+// 拉取模型列表：状态小字 + 成功后弹出选择弹窗
 async function loadModels(kind) {
   saveForm(); // 先保存，确保用刚填的 Key/Base URL
-  const listId = kind === 'gemini' ? 'model-list-gemini' : 'model-list-openai';
   const btnId = kind === 'gemini' ? 'fetch-models-gemini' : 'fetch-models-openai';
   const inputId = kind === 'gemini' ? 'set-gemini-model' : 'set-model';
-  const box = el(listId);
+  const status = el('model-status');
   const btn = el(btnId);
   btn.disabled = true;
-  btn.textContent = '拉取中…';
-  box.classList.remove('hidden');
+  status.textContent = '拉取中…';
   try {
     const models = await fetchModels();
-    box.innerHTML = '';
     if (!models.length) {
-      box.innerHTML = '<span class="ml-error">服务商返回了空列表</span>';
+      status.textContent = '✗ 拉取成功，但服务商返回了空列表';
       return;
     }
-    models.forEach(name => {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'model-chip';
-      chip.textContent = name;
-      chip.addEventListener('click', () => {
-        el(inputId).value = name;
-      });
-      box.appendChild(chip);
-    });
+    status.textContent = `✓ 拉取成功，共 ${models.length} 个模型，点击选择`;
+    openModelModal(models, inputId);
   } catch (e) {
-    box.innerHTML = `<span class="ml-error">${String(e.message || e)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`;
+    status.textContent = '✗ 拉取失败：' + String(e.message || e);
   } finally {
     btn.disabled = false;
-    btn.textContent = '🔄 拉取模型列表';
   }
+}
+
+// ---- 模型选择弹窗 ----
+let modalModels = [];
+let modalTargetInput = null;
+
+function openModelModal(models, inputId) {
+  modalModels = models;
+  modalTargetInput = inputId;
+  el('model-filter').value = '';
+  renderModelList('');
+  el('model-modal').classList.remove('hidden');
+}
+
+function closeModelModal() {
+  el('model-modal').classList.add('hidden');
+}
+
+function renderModelList(filter) {
+  const box = el('model-modal-list');
+  const q = filter.trim().toLowerCase();
+  const list = q ? modalModels.filter(m => m.toLowerCase().includes(q)) : modalModels;
+  box.innerHTML = '';
+  if (!list.length) {
+    box.innerHTML = '<div class="modal-empty muted">没有匹配的模型</div>';
+    return;
+  }
+  list.forEach(name => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'modal-item';
+    item.textContent = name;
+    item.addEventListener('click', () => {
+      el(modalTargetInput).value = name;
+      closeModelModal();
+    });
+    box.appendChild(item);
+  });
+}
+
+function initModelModal() {
+  el('model-modal-close').addEventListener('click', closeModelModal);
+  el('model-modal').addEventListener('click', (e) => {
+    if (e.target === el('model-modal')) closeModelModal(); // 点遮罩关闭
+  });
+  el('model-filter').addEventListener('input', (e) => renderModelList(e.target.value));
 }
