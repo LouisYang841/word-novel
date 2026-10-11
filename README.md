@@ -40,7 +40,7 @@ git add -A && git commit -m "..." && git push
 
 本项目全程由一次 Vibe Coding 会话完成：**人只负责出点子、做裁决、报 bug；AI（CodeBuddy Code）负责计划、写码、排查、部署**。没有一行代码是人手写的，13 个 commit 对应 13 轮对话。
 
-###📱 **全程在一台 OnePlus 15 安卓手机上完成**：Termux 环境 + CodeBuddy CLI，底层模型为 GLM-5.3-Flash。建仓、写码、调试、部署 GitHub Pages，**全程未使用电脑**。
+### 📱 **全程在一台 OnePlus 15 安卓手机上完成**：Termux 环境 + CodeBuddy CLI，底层模型为 GLM-5.3-Flash。建仓、写码、调试、部署 GitHub Pages，**全程未使用电脑**。
 
 以下是完整流程复盘，供想复刻这种协作方式的人参考。
 
