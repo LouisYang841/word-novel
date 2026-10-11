@@ -6,13 +6,14 @@ import { initPractice, showHome, collectPool, escapeHtml } from './practice.js';
 import { initWordbook, renderWordbook } from './wordbook.js';
 import { renderStats } from './stats.js';
 import { initSettings } from './settings.js';
+import { initLogView, renderLogView } from './logview.js';
 import { dueCount } from './srs.js';
 import { initGlobalErrorCapture, logInfo } from './logger.js';
 
 const $ = (id) => document.getElementById(id);
 
-const VIEWS = ['upload', 'book', 'practice', 'wordbook', 'stats', 'settings'];
-const TABS = ['upload', 'practice', 'wordbook', 'stats', 'settings'];
+const VIEWS = ['upload', 'book', 'practice', 'wordbook', 'stats', 'settings', 'log'];
+const TABS = ['upload', 'practice', 'wordbook', 'stats', 'settings', 'log'];
 const TITLES = {
   upload: '📚 Word Novel',
   book: '📖 书籍详情',
@@ -20,6 +21,7 @@ const TITLES = {
   wordbook: '⭐ 生词本',
   stats: '📊 统计',
   settings: '⚙️ 设置',
+  log: '🐞 调试日志',
 };
 
 function route() {
@@ -53,6 +55,7 @@ function route() {
   if (view === 'practice') { collectPool(); showHome(); }
   if (view === 'wordbook') renderWordbook();
   if (view === 'stats') renderStats();
+  if (view === 'log') renderLogView();
 }
 
 // ---------- 书架列表 ----------
@@ -99,6 +102,7 @@ function init() {
   initPractice();
   initWordbook();
   initSettings();
+  initLogView();
 
   $('back-btn').addEventListener('click', () => { location.hash = '#/upload'; });
   document.querySelectorAll('.tab').forEach(tab => {

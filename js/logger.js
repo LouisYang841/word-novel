@@ -20,7 +20,15 @@ export function log(level, tag, msg) {
   if (logs.length > CAP) logs = logs.slice(-CAP);
   save();
   (level === 'error' ? console.error : level === 'warn' ? console.warn : console.log)(`[${tag}]`, msg);
+  listeners.forEach(fn => { try { fn(entry); } catch { /* ignore */ } });
   return entry;
+}
+
+const listeners = new Set();
+// 订阅新日志（日志页实时刷新用），返回取消订阅函数
+export function onLog(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
 }
 
 export const logInfo = (tag, msg) => log('info', tag, msg);
