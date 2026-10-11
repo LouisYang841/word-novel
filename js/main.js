@@ -97,6 +97,11 @@ function renderBookList() {
 function init() {
   initGlobalErrorCapture();
   logInfo('app', '启动, hash=' + location.hash);
+
+  // SW 网络优先：避免部署后浏览器缓存新旧 JS/HTML 混用
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
+  }
   initUpload({ onDone: (book) => { location.hash = '#/book/' + book.id; } });
   initGenerate();
   initPractice();
