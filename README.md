@@ -38,7 +38,11 @@ git add -A && git commit -m "..." && git push
 
 # Vibe Coding 实录：这个项目是怎么做出来的
 
-本项目全程由一次 Vibe Coding 会话完成：**人只负责出点子、做裁决、报 bug；AI（CodeBuddy Code）负责计划、写码、排查、部署**。没有一行代码是人手写的，13 个 commit 对应 13 轮对话。以下是完整流程复盘，供想复刻这种协作方式的人参考。
+本项目全程由一次 Vibe Coding 会话完成：**人只负责出点子、做裁决、报 bug；AI（CodeBuddy Code）负责计划、写码、排查、部署**。没有一行代码是人手写的，13 个 commit 对应 13 轮对话。
+
+> 📱 **全程在一台 OnePlus 15 安卓手机上完成**：Termux 环境 + CodeBuddy CLI，底层模型为 GLM-5.3-Flash。建仓、写码、调试、部署 GitHub Pages，**全程未使用电脑**。
+
+以下是完整流程复盘，供想复刻这种协作方式的人参考。
 
 ## 第 0 步：一句话点子 → 计划先行
 
@@ -88,3 +92,5 @@ git add -A && git commit -m "..." && git push
 6. **用户的「不对劲」值得直接重做**：第 13 轮人一句「逻辑不太对劲」，AI 没有辩解，按人描述的交互重做——产品感觉在人手里，实现手感在 AI 手里。
 
 > 技术栈复刻清单：纯静态 HTML/ES Modules、localStorage（`wn:` 前缀命名空间）、BYOK 多协议（OpenAI 兼容 + Gemini 兼容，浏览器直连）、network-first service worker、GitHub Pages + gh CLI。零依赖、零构建。
+>
+> 📱 复刻环境清单：一台安卓手机 + [Termux](https://termux.dev)（提供 node / git / gh / python 等工具链）+ CodeBuddy CLI（`npm i -g @tencent-ai/codebuddy-code`，底层 GLM-5.3-Flash）。装好这三样，你的口袋就是完整的开发机。
