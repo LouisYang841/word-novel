@@ -1,5 +1,5 @@
 // settings.js — BYOK 配置、测试连接、数据导出/导入
-import { getSettings, saveSettings, exportAll, importAll, wipeAll } from './store.js';
+import { getSettings, saveSettings, exportAll, importAll, wipeAll, APP_VERSION } from './store.js';
 import { testConnection, fetchModels } from './ai.js';
 import { downloadBlob } from './wordbook.js';
 import { showToast } from './toast.js';
@@ -9,6 +9,8 @@ function el(id) { return document.getElementById(id); }
 export function initSettings() {
   // 载入当前配置
   const s = getSettings();
+  const versionEl = document.getElementById('app-version');
+  if (versionEl) versionEl.textContent = 'v' + APP_VERSION;
   el('set-provider').value = s.provider;
   el('set-baseurl').value = s.baseUrl;
   el('set-apikey').value = s.apiKey;

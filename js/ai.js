@@ -117,9 +117,15 @@ export async function generateWords(chunkText, opts) {
     try {
       raw = await chat(messages);
       const parsed = parseJSON(raw);
-      const words = sanitizeWords(parsed.words || []);
-      if (words.length) return words;
-      lastErr = new Error('AI 返回里没有可用单词（字段缺失或挖空句格式不符）');
+      const all = Array.isArray(parsed.words) ? parsed.words : [];
+      const words = sanitizeWords(all);
+      if (words.length) {
+        if (words.length < all.length) {
+          logWarn('ai', `${all.length - words.length}/${all.length} 个词被丢弃（缺字段/无法构造挖空句）`);
+        }
+        return words;
+      }
+      lastErr = new Error('AI 返回里没有可用单词（字段缺失或无法构造挖空句）');
     } catch (e) {
       lastErr = e;
       if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
@@ -132,20 +138,38 @@ export async function generateWords(chunkText, opts) {
 // 挖空句兼容 3 个及以上下划线 / 其他占位写法，统一归一成 ____
 const BLANK_RE = /_{3,}/;
 
+function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// AI 没给挖空句或挖空格式不对时，自己从原句构造
+function buildCloze(word, sentence) {
+  if (!sentence) return null;
+  if (BLANK_RE.test(sentence)) return sentence.replace(BLANK_RE, '____');
+  const re = new RegExp(`\\b${escapeRe(word)}\\b`, 'i');
+  if (re.test(sentence)) return sentence.replace(re, '____');
+  return null;
+}
+
 function sanitizeWords(words) {
-  return words.filter(w =>
-    w && typeof w.word === 'string' && w.word.trim() &&
-    typeof w.cloze === 'string' && BLANK_RE.test(w.cloze)
-  ).map(w => ({
-    word: w.word.trim().toLowerCase(),
-    pos: String(w.pos || '').trim(),
-    meaning: String(w.meaning || '').trim(),
-    sentence: String(w.sentence || '').trim(),
-    cloze: w.cloze.replace(BLANK_RE, '____'),
-    distractors: (Array.isArray(w.distractors) ? w.distractors : [])
-      .slice(0, 3).map(d => String(d).trim()).filter(Boolean),
-    difficulty: Math.min(5, Math.max(1, Number(w.difficulty) || 3)),
-  }));
+  const out = [];
+  for (const w of words) {
+    if (!w || typeof w.word !== 'string' || !w.word.trim()) continue;
+    const word = w.word.trim().toLowerCase();
+    const sentence = String(w.sentence || '').trim();
+    let cloze = typeof w.cloze === 'string' ? w.cloze.trim() : '';
+    cloze = BLANK_RE.test(cloze) ? cloze.replace(BLANK_RE, '____') : buildCloze(word, sentence);
+    if (!cloze) continue;
+    out.push({
+      word,
+      pos: String(w.pos || '').trim(),
+      meaning: String(w.meaning || '').trim(),
+      sentence,
+      cloze,
+      distractors: (Array.isArray(w.distractors) ? w.distractors : [])
+        .slice(0, 3).map(d => String(d).trim()).filter(Boolean),
+      difficulty: Math.min(5, Math.max(1, Number(w.difficulty) || 3)),
+    });
+  }
+  return out;
 }
 
 // ---------- 测试连接 ----------

@@ -308,6 +308,23 @@ export function showHome() {
   el('practice-result').classList.add('hidden');
   el('practice-home').classList.remove('hidden');
   renderReviewBanner();
+  // 从书详情页「开始练习本书」跳转过来：定位题源并自动开始
+  if (pendingBookStart) {
+    const bookId = pendingBookStart;
+    pendingBookStart = null;
+    collectPool();
+    const sel = el('prac-source');
+    if ([...sel.options].some(o => o.value === bookId)) sel.value = bookId;
+    startPractice(bookId, el('prac-mode').value, Number(el('prac-count').value));
+  }
+}
+
+// 由书详情页调用：切到练习页并自动用该书开练
+let pendingBookStart = null;
+export function startPracticeForBook(bookId) {
+  pendingBookStart = bookId;
+  if (location.hash === '#/practice') showHome();
+  else location.hash = '#/practice';
 }
 
 function renderReviewBanner() {
@@ -362,4 +379,13 @@ export function initPractice() {
     const count = Number(el('prac-count').value);
     startPractice(sourceId, mode, count);
   });
+  // 书详情页「▶ 开始练习本书」
+  const goBtn = document.getElementById('go-practice');
+  if (goBtn) {
+    goBtn.addEventListener('click', () => {
+      const bookId = currentBookId();
+      if (!bookId) return;
+      startPracticeForBook(bookId);
+    });
+  }
 }

@@ -1,5 +1,5 @@
 // main.js — 入口 + hash 路由
-import { getBooks, deleteBook, getBook } from './store.js';
+import { getBooks, deleteBook, getBook, APP_VERSION } from './store.js';
 import { initUpload } from './upload.js';
 import { initGenerate, renderBookView, currentBookId } from './generate.js';
 import { initPractice, showHome, collectPool, escapeHtml } from './practice.js';
@@ -96,7 +96,7 @@ function renderBookList() {
 // ---------- init ----------
 function init() {
   initGlobalErrorCapture();
-  logInfo('app', '启动, hash=' + location.hash);
+  logInfo('app', `启动 v${APP_VERSION}, hash=${location.hash}`);
 
   // SW 网络优先：避免部署后浏览器缓存新旧 JS/HTML 混用
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
