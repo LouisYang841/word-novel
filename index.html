@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f6ef7">
+<title>Word Novel · 小说背单词</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <button id="back-btn" class="icon-btn hidden" aria-label="返回">←</button>
+    <h1 id="view-title">📚 Word Novel</h1>
+  </header>
+
+  <main id="main">
+    <!-- ============ 上传 / 书架 ============ -->
+    <section id="view-upload" class="view">
+      <div class="card">
+        <h2>上传小说</h2>
+        <p class="muted">上传英文小说 txt 文件，AI 提取重点词生成填空题。所有数据只保存在本机浏览器。</p>
+        <label class="file-label" for="file-input">
+          <input type="file" id="file-input" accept=".txt,text/plain">
+          📂 选择 .txt 文件
+        </label>
+        <div id="upload-preview" class="hidden">
+          <div class="preview-row"><strong id="preview-name"></strong><span id="preview-size" class="muted"></span></div>
+          <p id="preview-text" class="preview-text"></p>
+          <div class="row gap">
+            <button id="confirm-upload" class="btn primary">确认导入</button>
+            <button id="cancel-upload" class="btn">取消</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>我的书架</h2>
+        <ul id="book-list" class="book-list"></ul>
+        <p id="book-empty" class="muted">还没有书。先上传一本吧。</p>
+      </div>
+    </section>
+
+    <!-- ============ 书详情 / 生成 ============ -->
+    <section id="view-book" class="view hidden">
+      <div class="card">
+        <h2 id="book-title"></h2>
+        <div id="book-meta" class="muted"></div>
+        <div class="row gap wrap" id="gen-controls">
+          <label>难度
+            <select id="gen-level">
+              <option value="CET-4">CET-4</option>
+              <option value="CET-6">CET-6</option>
+              <option value="TOEFL">TOEFL</option>
+              <option value="任意">不限</option>
+            </select>
+          </label>
+          <label>每批词数
+            <select id="gen-batch">
+              <option>5</option><option selected>8</option><option>12</option>
+            </select>
+          </label>
+          <button id="gen-start" class="btn primary">🤖 生成练习</button>
+          <button id="gen-stop" class="btn danger hidden">停止</button>
+        </div>
+        <div id="gen-progress" class="hidden">
+          <div class="progress"><div id="gen-bar"></div></div>
+          <div id="gen-status" class="muted"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>已生成练习 <span id="ex-count" class="badge">0</span></h2>
+        <div id="chunk-list" class="chunk-list"></div>
+      </div>
+      <div class="card">
+        <button id="go-practice" class="btn primary big">▶ 开始练习本书</button>
+      </div>
+    </section>
+
+    <!-- ============ 练习 ============ -->
+    <section id="view-practice" class="view hidden">
+      <div id="practice-home">
+        <div id="review-banner" class="card banner hidden"></div>
+        <div class="card">
+          <h2>练习设置</h2>
+          <label>题源
+            <select id="prac-source"></select>
+          </label>
+          <div class="row gap">
+            <label>模式
+              <select id="prac-mode">
+                <option value="choice">✅ 选择题</option>
+                <option value="cloze">✏️ 填空</option>
+              </select>
+            </label>
+            <label>题数
+              <select id="prac-count">
+                <option>5</option><option selected>10</option><option>20</option>
+              </select>
+            </label>
+          </div>
+          <button id="prac-start" class="btn primary big">开始</button>
+        </div>
+      </div>
+
+      <div id="practice-quiz" class="hidden">
+        <div class="quiz-head">
+          <div id="quiz-progress" class="muted"></div>
+          <div class="progress thin"><div id="quiz-bar"></div></div>
+        </div>
+        <div class="card">
+          <div id="quiz-cloze" class="cloze-sentence"></div>
+          <div id="quiz-pos" class="muted"></div>
+          <div id="quiz-choice-opts" class="choice-opts hidden"></div>
+          <div id="quiz-cloze-input" class="hidden">
+            <input type="text" id="cloze-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入单词…">
+            <button id="cloze-check" class="btn primary">检查</button>
+          </div>
+          <div id="quiz-feedback" class="feedback hidden"></div>
+        </div>
+      </div>
+
+      <div id="practice-result" class="hidden"></div>
+    </section>
+
+    <!-- ============ 生词本 ============ -->
+    <section id="view-wordbook" class="view hidden">
+      <div class="card">
+        <h2>生词本 <span id="wb-count" class="badge">0</span></h2>
+        <div class="row gap wrap">
+          <button id="wb-practice" class="btn primary">▶ 练习生词</button>
+          <button id="wb-export" class="btn">导出 CSV</button>
+        </div>
+        <ul id="wb-list" class="wb-list"></ul>
+        <p id="wb-empty" class="muted">生词本是空的。做错的词会自动加进来。</p>
+      </div>
+    </section>
+
+    <!-- ============ 统计 ============ -->
+    <section id="view-stats" class="view hidden">
+      <div class="card">
+        <h2>学习统计</h2>
+        <div id="stats-body"></div>
+      </div>
+    </section>
+
+    <!-- ============ 设置 ============ -->
+    <section id="view-settings" class="view hidden">
+      <div class="card">
+        <h2>AI 配置 (BYOK)</h2>
+        <label>服务商
+          <select id="set-provider">
+            <option value="openai">OpenAI 兼容</option>
+            <option value="gemini">Google Gemini</option>
+          </select>
+        </label>
+        <div id="set-openai-fields">
+          <label>Base URL<input type="url" id="set-baseurl" placeholder="https://api.openai.com/v1"></label>
+          <label>API Key<input type="password" id="set-apikey" placeholder="sk-..."></label>
+          <label>模型名<input type="text" id="set-model" placeholder="gpt-4o-mini"></label>
+        </div>
+        <div id="set-gemini-fields" class="hidden">
+          <label>Gemini API Key<input type="password" id="set-gemini-key" placeholder="AIza..."></label>
+          <label>模型名<input type="text" id="set-gemini-model" placeholder="gemini-2.0-flash"></label>
+        </div>
+        <button id="set-test" class="btn">🔍 测试连接</button>
+        <div id="set-test-result" class="muted"></div>
+      </div>
+      <div class="card">
+        <h2>练习偏好</h2>
+        <label class="check-label"><input type="checkbox" id="set-ai-grading"> 用 AI 判定填空拼写变体（每题多一次调用）</label>
+        <label>自定义 prompt 附加要求（可选）<textarea id="set-custom-prompt" rows="3" placeholder="例如：只挑动词和形容词"></textarea></label>
+        <button id="set-save" class="btn primary">保存设置</button>
+      </div>
+      <div class="card">
+        <h2>数据</h2>
+        <div class="row gap wrap">
+          <button id="set-export" class="btn">导出全部数据 (JSON)</button>
+          <button id="set-import" class="btn">导入数据</button>
+          <input type="file" id="import-file" accept=".json" class="hidden">
+          <button id="set-wipe" class="btn danger">清空所有数据</button>
+        </div>
+      </div>
+      <p class="muted center small">Word Novel · 静态页面 + localStorage + BYOK<br>API Key 只存在你的浏览器里，不会上传到任何服务器。</p>
+    </section>
+  </main>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="upload" class="tab active">📖<span>书架</span></button>
+    <button data-tab="practice" class="tab">✏️<span>练习</span></button>
+    <button data-tab="wordbook" class="tab">⭐<span>生词本</span></button>
+    <button data-tab="stats" class="tab">📊<span>统计</span></button>
+    <button data-tab="settings" class="tab">⚙️<span>设置</span></button>
+  </nav>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

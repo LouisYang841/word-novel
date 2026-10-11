@@ -1,0 +1,6 @@
+{
+  "name": "word-novel",
+  "private": true,
+  "type": "module",
+  "description": "上传英文小说，AI 提取重点词生成填空/选择题背单词（纯静态 + localStorage + BYOK）"
+}
