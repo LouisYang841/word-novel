@@ -2,6 +2,7 @@
 import { get as storeGet, getBooks, addProgress, getStats, saveStats, addWord } from './store.js';
 import { aiGrade } from './ai.js';
 import { currentBookId, ensureChunkQuestions } from './generate.js';
+import { showToast } from './toast.js';
 
 let session = null; // { mode, items, idx, results[] }
 
@@ -80,12 +81,15 @@ export async function startPractice(sourceId, mode, count) {
         el('load-bar').style.width = (done / total * 100) + '%';
       });
       if (!r.ok && r.reason === 'nokey') {
-        alert('请先到「设置」配置 AI 服务商和 API Key');
+        showToast('请先到「设置」配置 AI 服务商和 API Key', { type: 'error', duration: 5000 });
         location.hash = '#/settings';
         return;
       }
+      if (!r.ok && r.reason === 'busy') {
+        showToast('正在批量生成中，请稍候再试', { duration: 4000 });
+      }
       if (!r.ok && r.reason === 'error') {
-        alert('生成失败：' + r.error + '\n可稍后重试，已生成的题目仍然可用');
+        showToast('生成失败：' + r.error + '（已生成的题目仍可用）', { type: 'error', duration: 8000 });
       }
     } finally {
       loading.classList.add('hidden');

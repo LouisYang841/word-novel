@@ -1,6 +1,7 @@
 // generate.js — 生成流水线：分批、进度、可中断、按块重生成
 import { getBook, get as storeGet, set as storeSet, getSettings, getWordbook, getBooks, saveBooks } from './store.js';
 import { generateWords } from './ai.js';
+import { showToast } from './toast.js';
 
 let running = false;
 let abortFlag = false;
@@ -52,7 +53,7 @@ export function startGeneration(bookId, onlyChunk = null) {
   const settings = getSettings();
   const configured = settings.provider === 'gemini' ? settings.geminiKey : settings.apiKey;
   if (!configured) {
-    alert('请先到「设置」配置 AI 服务商和 API Key');
+    showToast('请先到「设置」配置 AI 服务商和 API Key', { type: 'error', duration: 5000 });
     location.hash = '#/settings';
     return;
   }
@@ -90,6 +91,7 @@ export function startGeneration(bookId, onlyChunk = null) {
         console.error(e);
         chunk.status = 'failed';
         chunk.failedMsg = String(e.message || e);
+        showToast(`第 ${chunk.index + 1} 块生成失败：${chunk.failedMsg}`, { type: 'error', duration: 8000 });
       }
       // 每块完成即落盘（可断点续传）
       storeSet(`book:${bookId}:chunks`, chunks);
