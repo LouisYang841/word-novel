@@ -34,6 +34,8 @@ python -m http.server 8080
 git add -A && git commit -m "..." && git push
 ```
 
+已部署 GithubPages: https://louisyang841.github.io/word-novel/
+
 ---
 
 # Vibe Coding 实录：这个项目是怎么做出来的
