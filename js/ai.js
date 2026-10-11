@@ -38,13 +38,14 @@ async function openaiChat(messages, s, { jsonMode, temperature }) {
 }
 
 async function geminiChat(messages, s, { jsonMode, temperature }) {
-  if (!s.geminiKey) throw new Error('未配置 Gemini API Key，请到「设置」填写');
+  if (!s.geminiKey) throw new Error('未配置 Gemini 兼容 API Key，请到「设置」填写');
   const model = s.geminiModel || 'gemini-2.0-flash';
   const system = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
   const contents = messages
     .filter(m => m.role !== 'system')
     .map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] }));
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(s.geminiKey)}`;
+  const base = (s.geminiBaseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
+  const url = `${base}/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(s.geminiKey)}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

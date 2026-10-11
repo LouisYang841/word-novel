@@ -12,6 +12,7 @@ export function initSettings() {
   el('set-baseurl').value = s.baseUrl;
   el('set-apikey').value = s.apiKey;
   el('set-model').value = s.model;
+  el('set-gemini-baseurl').value = s.geminiBaseUrl;
   el('set-gemini-key').value = s.geminiKey;
   el('set-gemini-model').value = s.geminiModel;
   el('set-ai-grading').checked = s.aiGrading;
@@ -73,6 +74,7 @@ function saveForm() {
     baseUrl: el('set-baseurl').value.trim(),
     apiKey: el('set-apikey').value.trim(),
     model: el('set-model').value.trim(),
+    geminiBaseUrl: el('set-gemini-baseurl').value.trim(),
     geminiKey: el('set-gemini-key').value.trim(),
     geminiModel: el('set-gemini-model').value.trim(),
     aiGrading: el('set-ai-grading').checked,

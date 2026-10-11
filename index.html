@@ -157,7 +157,7 @@
         <label>服务商
           <select id="set-provider">
             <option value="openai">OpenAI 兼容</option>
-            <option value="gemini">Google Gemini</option>
+            <option value="gemini">Gemini 兼容</option>
           </select>
         </label>
         <div id="set-openai-fields">
@@ -166,7 +166,8 @@
           <label>模型名<input type="text" id="set-model" placeholder="gpt-4o-mini"></label>
         </div>
         <div id="set-gemini-fields" class="hidden">
-          <label>Gemini API Key<input type="password" id="set-gemini-key" placeholder="AIza..."></label>
+          <label>Base URL<input type="url" id="set-gemini-baseurl" placeholder="https://generativelanguage.googleapis.com/v1beta"></label>
+          <label>API Key<input type="password" id="set-gemini-key" placeholder="AIza..."></label>
           <label>模型名<input type="text" id="set-gemini-model" placeholder="gemini-2.0-flash"></label>
         </div>
         <button id="set-test" class="btn">🔍 测试连接</button>

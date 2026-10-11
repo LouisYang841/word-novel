@@ -32,6 +32,7 @@ export const DEFAULT_SETTINGS = {
   baseUrl: 'https://api.openai.com/v1',
   apiKey: '',
   model: 'gpt-4o-mini',
+  geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
   geminiKey: '',
   geminiModel: 'gemini-2.0-flash',
   aiGrading: false,
