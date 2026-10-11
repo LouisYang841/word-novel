@@ -159,8 +159,9 @@ export function currentBookId() {
 }
 
 // 按需生成：确保某本书至少有 minCount 道题，逐块生成直到够数或无块可生
+// onlyChunkIndex 非空时只补生成该块（若未生成）
 // 返回 { ok, reason? }；reason: 'busy' | 'nokey' | 'error'
-export async function ensureChunkQuestions(bookId, minCount, onProgress) {
+export async function ensureChunkQuestions(bookId, minCount, onProgress, onlyChunkIndex = null) {
   if (running) return { ok: false, reason: 'busy' };
   const settings = getSettings();
   const configured = settings.provider === 'gemini' ? settings.geminiKey : settings.apiKey;
@@ -170,10 +171,13 @@ export async function ensureChunkQuestions(bookId, minCount, onProgress) {
   const count = Number(document.getElementById('gen-batch')?.value) || 8;
 
   while (true) {
-    if (storeGet(`book:${bookId}:exercises`, []).length >= minCount) return { ok: true };
     const cs = storeGet(`book:${bookId}:chunks`, []);
-    const chunk = cs.find(c => c.status !== 'done');
-    if (!chunk) return { ok: true }; // 所有块都已生成，用现有题目
+    const chunk = cs.find(c => c.status !== 'done'
+      && (onlyChunkIndex === null || c.index === onlyChunkIndex));
+    if (!chunk) return { ok: true }; // 没有可生成的块了，用现有题目
+    // 全书模式：题够了就停；指定块模式：只看该块状态，不看全书题数
+    if (onlyChunkIndex === null
+      && storeGet(`book:${bookId}:exercises`, []).length >= minCount) return { ok: true };
     onProgress?.(chunk.index + 1, cs.length);
     try {
       const text = storeGet(`book:${bookId}:text`, '');

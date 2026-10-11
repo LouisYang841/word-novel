@@ -1,5 +1,5 @@
 // store.js — localStorage 封装（wn: 前缀）
-export const APP_VERSION = '1.0.4';
+export const APP_VERSION = '1.0.5';
 const PREFIX = 'wn:';
 
 export function get(key, fallback = null) {

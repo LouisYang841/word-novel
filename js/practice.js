@@ -16,18 +16,46 @@ export function collectPool() {
   const opts = [{ value: 'all', label: '全部书籍' },
     ...books.map(b => ({ value: b.id, label: b.name }))];
   const sel = el('prac-source');
+  const prev = sel.value;
   sel.innerHTML = '';
   opts.forEach(o => {
     const opt = document.createElement('option');
     opt.value = o.value; opt.textContent = o.label;
     sel.appendChild(opt);
   });
+  if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
+  updateChunkOptions(sel.value);
 }
 
-function getExercises(sourceId) {
+function getExercises(sourceId, chunkIndex = 'all') {
   const ids = sourceId === 'all' ? getBooks().map(b => b.id) : [sourceId];
   return ids.flatMap(id => storeGet(`book:${id}:exercises`, [])
-    .map(e => ({ ...e, bookId: id })));
+    .map(e => ({ ...e, bookId: id })))
+    .filter(e => chunkIndex === 'all' || e.chunkIndex === Number(chunkIndex));
+}
+
+// 根据 bookId 填充「范围」下拉：全部块 + 每块（含已生成题数）
+export function updateChunkOptions(sourceId) {
+  const sel = el('prac-chunk');
+  sel.innerHTML = '';
+  const add = (v, label) => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = label;
+    sel.appendChild(o);
+  };
+  if (sourceId === 'all') {
+    sel.disabled = true;
+    add('all', '全部块');
+    return;
+  }
+  sel.disabled = false;
+  add('all', '全部块');
+  const chunks = storeGet(`book:${sourceId}:chunks`, []);
+  const exs = storeGet(`book:${sourceId}:exercises`, []);
+  const counts = {};
+  exs.forEach(e => { counts[e.chunkIndex] = (counts[e.chunkIndex] || 0) + 1; });
+  chunks.forEach(c => add(String(c.index),
+    `第 ${c.index + 1} 块 · ${counts[c.index] || 0} 题${c.status === 'done' ? '' : '（未生成）'}`));
 }
 
 // ---------- 判分 ----------
@@ -66,9 +94,9 @@ export async function gradeCloze(input, ex) {
 
 // ---------- 会话 ----------
 
-export async function startPractice(sourceId, mode, count) {
-  let pool = getExercises(sourceId);
-  // 做一块生一块：题不够时自动逐块生成（仅单本书来源；'all' 只用已生成的）
+export async function startPractice(sourceId, mode, count, chunkIndex = 'all') {
+  let pool = getExercises(sourceId, chunkIndex);
+  // 做一块生一块：题不够时自动生成（仅单本书来源；'all' 只用已生成的）
   if (pool.length < count && sourceId !== 'all') {
     const book = getBooks().find(b => b.id === sourceId);
     const loading = el('practice-loading');
@@ -76,10 +104,24 @@ export async function startPractice(sourceId, mode, count) {
     el('practice-home').classList.add('hidden');
     el('practice-result').classList.add('hidden');
     try {
-      const r = await ensureChunkQuestions(sourceId, count, (done, total) => {
-        el('load-text').textContent = `《${book ? book.name : ''}》第 ${done}/${total} 块生成中…`;
-        el('load-bar').style.width = (done / total * 100) + '%';
-      });
+      // 选了具体块：只补生成该块；选全部：逐块生成直到够数
+      let r;
+      if (chunkIndex !== 'all') {
+        const chunks = storeGet(`book:${sourceId}:chunks`, []);
+        const c = chunks.find(x => x.index === Number(chunkIndex));
+        r = c && c.status !== 'done'
+          ? await ensureChunkQuestions(sourceId, 1,
+            (done, total) => {
+              el('load-text').textContent = `《${book ? book.name : ''}》第 ${done}/${total} 块生成中…`;
+              el('load-bar').style.width = (done / total * 100) + '%';
+            }, Number(chunkIndex))
+          : { ok: true };
+      } else {
+        r = await ensureChunkQuestions(sourceId, count, (done, total) => {
+          el('load-text').textContent = `《${book ? book.name : ''}》第 ${done}/${total} 块生成中…`;
+          el('load-bar').style.width = (done / total * 100) + '%';
+        });
+      }
       if (!r.ok && r.reason === 'nokey') {
         showToast('请先到「设置」配置 AI 服务商和 API Key', { type: 'error', duration: 5000 });
         location.hash = '#/settings';
@@ -94,7 +136,7 @@ export async function startPractice(sourceId, mode, count) {
     } finally {
       loading.classList.add('hidden');
     }
-    pool = getExercises(sourceId);
+    pool = getExercises(sourceId, chunkIndex);
   }
   if (!pool.length) {
     alert(sourceId === 'all'
@@ -297,7 +339,7 @@ function showResult() {
   document.getElementById('result-again').addEventListener('click', () => {
     const sourceId = el('prac-source').value;
     const mode = session.review ? 'choice' : session.mode;
-    startPractice(sourceId, mode, Number(el('prac-count').value));
+    startPractice(sourceId, mode, Number(el('prac-count').value), el('prac-chunk').value);
   });
   document.getElementById('result-back').addEventListener('click', showHome);
 }
@@ -308,18 +350,18 @@ export function showHome() {
   el('practice-result').classList.add('hidden');
   el('practice-home').classList.remove('hidden');
   renderReviewBanner();
-  // 从书详情页「开始练习本书」跳转过来：定位题源并自动开始
+  // 从书详情页「开始练习本书」跳转过来：自动选中该书（不自动开考）
   if (pendingBookStart) {
     const bookId = pendingBookStart;
     pendingBookStart = null;
     collectPool();
     const sel = el('prac-source');
     if ([...sel.options].some(o => o.value === bookId)) sel.value = bookId;
-    startPractice(bookId, el('prac-mode').value, Number(el('prac-count').value));
+    updateChunkOptions(bookId);
   }
 }
 
-// 由书详情页调用：切到练习页并自动用该书开练
+// 由书详情页调用：切到练习页并选中该书
 let pendingBookStart = null;
 export function startPracticeForBook(bookId) {
   pendingBookStart = bookId;
@@ -377,9 +419,11 @@ export function initPractice() {
     const sourceId = el('prac-source').value;
     const mode = el('prac-mode').value;
     const count = Number(el('prac-count').value);
-    startPractice(sourceId, mode, count);
+    const chunkIndex = el('prac-chunk').value;
+    startPractice(sourceId, mode, count, chunkIndex);
   });
-  // 书详情页「▶ 开始练习本书」
+  el('prac-source').addEventListener('change', (e) => updateChunkOptions(e.target.value));
+  // 书详情页「▶ 开始练习本书」：只跳转 + 选中
   const goBtn = document.getElementById('go-practice');
   if (goBtn) {
     goBtn.addEventListener('click', () => {
