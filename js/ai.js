@@ -1,6 +1,6 @@
 // ai.js — provider 抽象：OpenAI 兼容 + Gemini 原生
 import { getSettings } from './store.js';
-import { logInfo, logError } from './logger.js';
+import { logInfo, logWarn, logError } from './logger.js';
 
 // ---------- 统一调用接口 ----------
 
@@ -15,6 +15,7 @@ export async function chat(messages, { jsonMode = true, temperature = 0.7 } = {}
       ? await geminiChat(messages, s, { jsonMode, temperature })
       : await openaiChat(messages, s, { jsonMode, temperature });
     logInfo('ai', `← OK ${Date.now() - t0}ms resp=${out.length} chars`);
+    logInfo('ai', `原始返回: ${truncate(out, 1500)}`);
     return out;
   } catch (e) {
     logError('ai', `✗ FAIL ${Date.now() - t0}ms ${e.message || e}`);
@@ -111,31 +112,36 @@ export function parseJSON(text) {
 export async function generateWords(chunkText, opts) {
   const messages = buildGeneratePrompt(chunkText, opts);
   let lastErr;
+  let raw = '';
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = await chat(messages);
+      raw = await chat(messages);
       const parsed = parseJSON(raw);
       const words = sanitizeWords(parsed.words || []);
       if (words.length) return words;
-      lastErr = new Error('AI 未返回有效单词');
+      lastErr = new Error('AI 返回里没有可用单词（字段缺失或挖空句格式不符）');
     } catch (e) {
       lastErr = e;
       if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
     }
+    logWarn('ai', `生成解析失败(${attempt + 1}/2): ${lastErr.message} | 原始返回: ${truncate(raw, 600)}`);
   }
-  throw lastErr;
+  throw new Error(`${lastErr.message} | 原始返回前 300 字: ${truncate(raw, 300)}`);
 }
+
+// 挖空句兼容 3 个及以上下划线 / 其他占位写法，统一归一成 ____
+const BLANK_RE = /_{3,}/;
 
 function sanitizeWords(words) {
   return words.filter(w =>
     w && typeof w.word === 'string' && w.word.trim() &&
-    typeof w.sentence === 'string' && w.sentence.includes('____')
+    typeof w.cloze === 'string' && BLANK_RE.test(w.cloze)
   ).map(w => ({
     word: w.word.trim().toLowerCase(),
     pos: String(w.pos || '').trim(),
     meaning: String(w.meaning || '').trim(),
-    sentence: w.sentence.trim(),
-    cloze: w.cloze.trim(),
+    sentence: String(w.sentence || '').trim(),
+    cloze: w.cloze.replace(BLANK_RE, '____'),
     distractors: (Array.isArray(w.distractors) ? w.distractors : [])
       .slice(0, 3).map(d => String(d).trim()).filter(Boolean),
     difficulty: Math.min(5, Math.max(1, Number(w.difficulty) || 3)),
