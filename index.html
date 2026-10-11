@@ -164,11 +164,15 @@
           <label>Base URL<input type="url" id="set-baseurl" placeholder="https://api.openai.com/v1"></label>
           <label>API Key<input type="password" id="set-apikey" placeholder="sk-..."></label>
           <label>模型名<input type="text" id="set-model" placeholder="gpt-4o-mini"></label>
+          <button type="button" id="fetch-models-openai" class="btn">🔄 拉取模型列表</button>
+          <div id="model-list-openai" class="model-list hidden"></div>
         </div>
         <div id="set-gemini-fields" class="hidden">
           <label>Base URL<input type="url" id="set-gemini-baseurl" placeholder="https://generativelanguage.googleapis.com/v1beta"></label>
           <label>API Key<input type="password" id="set-gemini-key" placeholder="AIza..."></label>
           <label>模型名<input type="text" id="set-gemini-model" placeholder="gemini-2.0-flash"></label>
+          <button type="button" id="fetch-models-gemini" class="btn">🔄 拉取模型列表</button>
+          <div id="model-list-gemini" class="model-list hidden"></div>
         </div>
         <button id="set-test" class="btn">🔍 测试连接</button>
         <div id="set-test-result" class="muted"></div>

@@ -161,4 +161,36 @@ export async function aiGrade(input, answer, sentence) {
   return parseJSON(raw);
 }
 
+// ---------- 拉取模型列表 ----------
+
+export async function fetchModels() {
+  const s = getSettings();
+  if (s.provider === 'gemini') {
+    if (!s.geminiKey) throw new Error('未配置 Gemini 兼容 API Key');
+    const base = (s.geminiBaseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
+    const res = await fetch(`${base}/models?pageSize=1000&key=${encodeURIComponent(s.geminiKey)}`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`拉取失败 ${res.status}: ${truncate(body, 300)}`);
+    }
+    const data = await res.json();
+    return (data.models || [])
+      .filter(m => !m.supportedGenerationMethods || m.supportedGenerationMethods.includes('generateContent'))
+      .map(m => String(m.name || '').replace(/^models\//, ''))
+      .filter(Boolean);
+  }
+  // OpenAI 兼容
+  if (!s.apiKey) throw new Error('未配置 API Key');
+  const base = (s.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const res = await fetch(`${base}/models`, {
+    headers: { 'Authorization': `Bearer ${s.apiKey}` },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`拉取失败 ${res.status}: ${truncate(body, 300)}`);
+  }
+  const data = await res.json();
+  return (data.data || []).map(m => m.id).filter(Boolean).sort();
+}
+
 function truncate(s, n) { return s.length > n ? s.slice(0, n) + '…' : s; }

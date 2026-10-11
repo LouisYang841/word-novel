@@ -1,6 +1,6 @@
 // settings.js — BYOK 配置、测试连接、数据导出/导入
 import { getSettings, saveSettings, exportAll, importAll, wipeAll } from './store.js';
-import { testConnection } from './ai.js';
+import { testConnection, fetchModels } from './ai.js';
 import { downloadBlob } from './wordbook.js';
 
 function el(id) { return document.getElementById(id); }
@@ -20,6 +20,9 @@ export function initSettings() {
   toggleProviderFields();
 
   el('set-provider').addEventListener('change', toggleProviderFields);
+
+  el('fetch-models-openai').addEventListener('click', () => loadModels('openai'));
+  el('fetch-models-gemini').addEventListener('click', () => loadModels('gemini'));
 
   el('set-test').addEventListener('click', async () => {
     saveForm(); // 先保存再测
@@ -86,4 +89,41 @@ function toggleProviderFields() {
   const isGemini = el('set-provider').value === 'gemini';
   el('set-openai-fields').classList.toggle('hidden', isGemini);
   el('set-gemini-fields').classList.toggle('hidden', !isGemini);
+}
+
+// 拉取模型列表并渲染成点选芯片，点选后填入模型名输入框
+async function loadModels(kind) {
+  saveForm(); // 先保存，确保用刚填的 Key/Base URL
+  const listId = kind === 'gemini' ? 'model-list-gemini' : 'model-list-openai';
+  const btnId = kind === 'gemini' ? 'fetch-models-gemini' : 'fetch-models-openai';
+  const inputId = kind === 'gemini' ? 'set-gemini-model' : 'set-model';
+  const box = el(listId);
+  const btn = el(btnId);
+  btn.disabled = true;
+  btn.textContent = '拉取中…';
+  box.classList.remove('hidden');
+  try {
+    const models = await fetchModels();
+    box.innerHTML = '';
+    if (!models.length) {
+      box.innerHTML = '<span class="ml-error">服务商返回了空列表</span>';
+      return;
+    }
+    models.forEach(name => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'model-chip';
+      chip.textContent = name;
+      chip.addEventListener('click', () => {
+        el(inputId).value = name;
+      });
+      box.appendChild(chip);
+    });
+  } catch (e) {
+    box.innerHTML = `<span class="ml-error">${String(e.message || e)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 拉取模型列表';
+  }
 }
