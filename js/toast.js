@@ -1,5 +1,8 @@
 // toast.js — 页面内浮层提示
+import { log } from './logger.js';
+
 export function showToast(msg, { type = 'info', duration = 4000 } = {}) {
+  log(type === 'error' ? 'error' : 'info', 'toast', msg);
   let box = document.getElementById('toast-box');
   if (!box) {
     box = document.createElement('div');

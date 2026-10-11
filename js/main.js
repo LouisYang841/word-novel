@@ -7,6 +7,7 @@ import { initWordbook, renderWordbook } from './wordbook.js';
 import { renderStats } from './stats.js';
 import { initSettings } from './settings.js';
 import { dueCount } from './srs.js';
+import { initGlobalErrorCapture, logInfo } from './logger.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -91,6 +92,8 @@ function renderBookList() {
 
 // ---------- init ----------
 function init() {
+  initGlobalErrorCapture();
+  logInfo('app', '启动, hash=' + location.hash);
   initUpload({ onDone: (book) => { location.hash = '#/book/' + book.id; } });
   initGenerate();
   initPractice();

@@ -2,6 +2,7 @@
 import { getBook, get as storeGet, set as storeSet, getSettings, getWordbook, getBooks, saveBooks } from './store.js';
 import { generateWords } from './ai.js';
 import { showToast } from './toast.js';
+import { logInfo, logError } from './logger.js';
 
 let running = false;
 let abortFlag = false;
@@ -87,10 +88,12 @@ export function startGeneration(bookId, onlyChunk = null) {
         chunk.status = 'done';
         chunk.failedMsg = null;
         ok++;
+        logInfo('gen', `批量: 块 #${chunk.index + 1} 完成, +${words.length} 词`);
       } catch (e) {
         console.error(e);
         chunk.status = 'failed';
         chunk.failedMsg = String(e.message || e);
+        logError('gen', `批量: 块 #${chunk.index + 1} 失败: ${chunk.failedMsg}`);
         showToast(`第 ${chunk.index + 1} 块生成失败：${chunk.failedMsg}`, { type: 'error', duration: 8000 });
       }
       // 每块完成即落盘（可断点续传）
@@ -179,10 +182,12 @@ export async function ensureChunkQuestions(bookId, minCount, onProgress) {
       });
       appendExercises(bookId, chunk.index, words);
       chunk.status = 'done';
+      logInfo('gen', `按需: 块 #${chunk.index + 1} 完成, +${words.length} 词`);
     } catch (e) {
       console.error(e);
       chunk.status = 'failed';
       chunk.failedMsg = String(e.message || e);
+      logError('gen', `按需: 块 #${chunk.index + 1} 失败: ${chunk.failedMsg}`);
       storeSet(`book:${bookId}:chunks`, cs);
       return { ok: false, reason: 'error', error: String(e.message || e) };
     }

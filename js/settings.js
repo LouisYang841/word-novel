@@ -2,6 +2,8 @@
 import { getSettings, saveSettings, exportAll, importAll, wipeAll } from './store.js';
 import { testConnection, fetchModels } from './ai.js';
 import { downloadBlob } from './wordbook.js';
+import { showToast } from './toast.js';
+import { getLogs, clearLogs, logsAsText } from './logger.js';
 
 function el(id) { return document.getElementById(id); }
 
@@ -24,6 +26,29 @@ export function initSettings() {
   el('fetch-models-openai').addEventListener('click', () => loadModels('openai'));
   el('fetch-models-gemini').addEventListener('click', () => loadModels('gemini'));
   initModelModal();
+
+  // 调试日志
+  el('log-view').addEventListener('click', () => { renderLogModal(); el('log-modal').classList.remove('hidden'); });
+  el('log-modal-close').addEventListener('click', () => el('log-modal').classList.add('hidden'));
+  el('log-modal').addEventListener('click', (e) => {
+    if (e.target === el('log-modal')) el('log-modal').classList.add('hidden');
+  });
+  el('log-copy').addEventListener('click', async () => {
+    const text = logsAsText();
+    if (!text) { showToast('日志是空的', { duration: 3000 }); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`已复制 ${text.split('\n').length} 条日志到剪贴板`, { type: 'ok', duration: 3000 });
+    } catch {
+      downloadBlob(text, 'word-novel-log.txt', 'text/plain');
+      showToast('剪贴板不可用，已改为下载 log.txt', { duration: 4000 });
+    }
+  });
+  el('log-clear').addEventListener('click', () => {
+    if (!confirm('清空调试日志？')) return;
+    clearLogs();
+    showToast('日志已清空', { duration: 2500 });
+  });
 
   el('set-test').addEventListener('click', async () => {
     saveForm(); // 先保存再测
@@ -160,4 +185,23 @@ function initModelModal() {
     if (e.target === el('model-modal')) closeModelModal(); // 点遮罩关闭
   });
   el('model-filter').addEventListener('input', (e) => renderModelList(e.target.value));
+}
+
+function renderLogModal() {
+  const box = el('log-modal-list');
+  const entries = getLogs();
+  if (!entries.length) {
+    box.innerHTML = '<div class="modal-empty muted">还没有日志</div>';
+    return;
+  }
+  box.innerHTML = '';
+  entries.forEach(e => {
+    const div = document.createElement('div');
+    div.className = 'log-entry ' + e.level;
+    const time = new Date(e.t).toLocaleTimeString('zh-CN', { hour12: false });
+    div.innerHTML =
+      `<span class="log-meta">${time} [${e.tag}]</span> ${
+        String(e.msg).replace(/&/g, '&amp;').replace(/</g, '&lt;')}`;
+    box.appendChild(div);
+  });
 }

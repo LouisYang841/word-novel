@@ -1,14 +1,25 @@
 // ai.js — provider 抽象：OpenAI 兼容 + Gemini 原生
 import { getSettings } from './store.js';
+import { logInfo, logError } from './logger.js';
 
 // ---------- 统一调用接口 ----------
 
 export async function chat(messages, { jsonMode = true, temperature = 0.7 } = {}) {
   const s = getSettings();
-  if (s.provider === 'gemini') {
-    return geminiChat(messages, s, { jsonMode, temperature });
+  const model = s.provider === 'gemini' ? (s.geminiModel || 'gemini-2.0-flash') : (s.model || '?');
+  const promptChars = messages.reduce((n, m) => n + m.content.length, 0);
+  const t0 = Date.now();
+  logInfo('ai', `→ ${s.provider} ${model} json=${jsonMode} prompt≈${promptChars} chars`);
+  try {
+    const out = s.provider === 'gemini'
+      ? await geminiChat(messages, s, { jsonMode, temperature })
+      : await openaiChat(messages, s, { jsonMode, temperature });
+    logInfo('ai', `← OK ${Date.now() - t0}ms resp=${out.length} chars`);
+    return out;
+  } catch (e) {
+    logError('ai', `✗ FAIL ${Date.now() - t0}ms ${e.message || e}`);
+    throw e;
   }
-  return openaiChat(messages, s, { jsonMode, temperature });
 }
 
 async function openaiChat(messages, s, { jsonMode, temperature }) {
@@ -165,6 +176,18 @@ export async function aiGrade(input, answer, sentence) {
 
 export async function fetchModels() {
   const s = getSettings();
+  logInfo('models', `拉取模型列表 provider=${s.provider}`);
+  try {
+    const list = await fetchModelsInner(s);
+    logInfo('models', `← OK ${list.length} 个模型`);
+    return list;
+  } catch (e) {
+    logError('models', `✗ ${e.message || e}`);
+    throw e;
+  }
+}
+
+async function fetchModelsInner(s) {
   if (s.provider === 'gemini') {
     if (!s.geminiKey) throw new Error('未配置 Gemini 兼容 API Key');
     const base = (s.geminiBaseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');

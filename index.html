@@ -191,6 +191,15 @@
           <button id="set-wipe" class="btn danger">清空所有数据</button>
         </div>
       </div>
+      <div class="card">
+        <h2>调试日志</h2>
+        <div class="row gap wrap">
+          <button id="log-view" class="btn primary">查看日志</button>
+          <button id="log-copy" class="btn">复制全部</button>
+          <button id="log-clear" class="btn danger">清空</button>
+        </div>
+        <p class="muted small">记录 AI 请求、生成过程和报错（最近 300 条，存本地）。遇到问题点「复制全部」发给我即可排查。</p>
+      </div>
       <p class="muted center small">Word Novel · 静态页面 + localStorage + BYOK<br>API Key 只存在你的浏览器里，不会上传到任何服务器。</p>
     </section>
   </main>
@@ -211,6 +220,16 @@
       </div>
       <input type="text" id="model-filter" placeholder="🔍 搜索模型…" autocomplete="off">
       <div id="model-modal-list" class="modal-list"></div>
+    </div>
+  </div>
+  <!-- 日志查看弹窗 -->
+  <div id="log-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <strong>调试日志（新 → 旧）</strong>
+        <button id="log-modal-close" class="icon-btn" aria-label="关闭">×</button>
+      </div>
+      <div id="log-modal-list" class="modal-list mono"></div>
     </div>
   </div>
 </div>

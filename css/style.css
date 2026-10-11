@@ -131,6 +131,11 @@ label textarea { resize: vertical; }
 }
 .modal-item:active { background: var(--bg); }
 .modal-empty { padding: 1rem; text-align: center; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; }
+.log-entry { padding: .45rem .5rem; border-bottom: 1px solid var(--border); white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
+.log-entry.error { color: var(--danger); }
+.log-entry.warn { color: #b45309; }
+.log-entry .log-meta { color: var(--muted); }
 
 /* chunk list */
 .chunk-list { display: flex; flex-wrap: wrap; gap: .4rem; }
