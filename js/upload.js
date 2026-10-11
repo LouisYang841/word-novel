@@ -1,7 +1,9 @@
 // upload.js — txt 上传、编码检测、分块
 import { getBooks, saveBooks, set as storeSet } from './store.js';
 
-const CHUNK_SIZE = 4000;
+// 块大小对齐常见阅读理解语篇（~500 词），避免一次喂给 AI 太长
+const CHUNK_SIZE = 3000;
+const MIN_CHUNK = 1200;
 
 export function initUpload({ onDone }) {
   const fileInput = document.getElementById('file-input');
@@ -74,27 +76,26 @@ function createBook(name, text) {
   return book;
 }
 
-// 按段落边界切 ~4000 字符的块
+// 按段落边界切 ~3000 字符的块；向后找边界，块大小永不超过 CHUNK_SIZE
 export function splitChunks(text) {
   const chunks = [];
   let start = 0;
   while (start < text.length) {
-    if (text.length - start <= CHUNK_SIZE * 1.5) {
+    if (text.length - start <= CHUNK_SIZE) {
       chunks.push({ start, end: text.length });
       break;
     }
-    let end = start + CHUNK_SIZE;
-    // 在后 40% 范围内找最近的段落边界
-    const window = text.slice(end, Math.min(end + CHUNK_SIZE * 0.4, text.length));
-    const m = window.search(/\n\s*\n/);
-    if (m >= 0) {
-      end = end + m + 1;
-    } else {
-      // 找最近的句子结尾
-      const sub = text.slice(start, end);
-      const lastDot = Math.max(sub.lastIndexOf('. '), sub.lastIndexOf('? '), sub.lastIndexOf('! '));
-      if (lastDot > CHUNK_SIZE * 0.5) end = start + lastDot + 1;
+    const sub = text.slice(start, start + CHUNK_SIZE);
+    let cut = -1;
+    // 优先取块内最后一个段落边界
+    cut = sub.lastIndexOf('\n\n');
+    if (cut < MIN_CHUNK) cut = sub.lastIndexOf('\n');
+    // 其次句子边界
+    if (cut < MIN_CHUNK) {
+      const s = Math.max(sub.lastIndexOf('. '), sub.lastIndexOf('? '), sub.lastIndexOf('! '));
+      if (s >= MIN_CHUNK) cut = s + 1;
     }
+    const end = start + (cut >= MIN_CHUNK ? cut + 1 : CHUNK_SIZE);
     chunks.push({ start, end });
     start = end;
   }
